@@ -14,6 +14,7 @@
     <!-- Controller 계층만 스캔 (Service/Mapper는 root-context에서 스캔) -->
     <context:component-scan base-package="egovframework.library">
         <context:include-filter type="annotation" expression="org.springframework.stereotype.Controller"/>
+        <context:include-filter type="annotation" expression="org.springframework.web.bind.annotation.ControllerAdvice"/>
         <context:exclude-filter type="annotation" expression="org.springframework.stereotype.Service"/>
     </context:component-scan>
 
