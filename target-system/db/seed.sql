@@ -1064,3 +1064,12 @@ INSERT INTO TB_LOAN_HIST (HIST_ID, LOAN_ID, PROCESS_TYPE, PROCESS_DATETIME, PROC
 INSERT INTO TB_LOAN_HIST (HIST_ID, LOAN_ID, PROCESS_TYPE, PROCESS_DATETIME, PROCESSOR) VALUES
 ('LH000088', 'LN000070', '1', '2026-08-11 09:30:00', 'SYSTEM');
 
+-- ----------------------------------------------------------------
+-- 7. Text-to-SQL 실행용 읽기전용 계정
+-- AI(text2sql)는 이 계정으로만 접속해 SELECT만 실행한다 (SELECT 외 전부 DB 권한 자체로 차단).
+-- 프로토타입 기본 비밀번호이므로 실제 배포 전 반드시 변경할 것.
+-- ----------------------------------------------------------------
+CREATE USER IF NOT EXISTS 'ai_reader'@'%' IDENTIFIED BY 'ChangeMe_AiReader!2026';
+GRANT SELECT ON library_db.* TO 'ai_reader'@'%';
+FLUSH PRIVILEGES;
+
