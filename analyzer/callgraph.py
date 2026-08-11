@@ -67,19 +67,19 @@ class EdgeRecord:
     edge_type: str
 
 
-def _method_node_id(class_name: str, method_name: str, layer: str) -> str:
+def method_node_id(class_name: str, method_name: str, layer: str) -> str:
     return f"{_LAYER_TO_NODE_TYPE[layer]}::{class_name}.{method_name}"
 
 
-def _url_node_id(url: str) -> str:
+def url_node_id(url: str) -> str:
     return f"URL::{url}"
 
 
-def _sql_node_id(namespace: str, sql_id: str) -> str:
+def sql_node_id(namespace: str, sql_id: str) -> str:
     return f"SQL::{namespace}.{sql_id}"
 
 
-def _table_node_id(table_name: str) -> str:
+def table_node_id(table_name: str) -> str:
     return f"TABLE::{table_name}"
 
 
@@ -121,7 +121,7 @@ class GraphBuilder:
                 continue
             node_type = _LAYER_TO_NODE_TYPE[layer]
             for m in c["methods"]:
-                node_id = _method_node_id(c["class_name"], m["method_name"], layer)
+                node_id = method_node_id(c["class_name"], m["method_name"], layer)
                 self._add_node(NodeRecord(
                     id=node_id,
                     node_type=node_type,
@@ -142,26 +142,26 @@ class GraphBuilder:
                 if not m.get("url"):
                     continue
                 url = m["url"]
-                url_id = _url_node_id(url)
+                url_id = url_node_id(url)
                 if url_id not in self.nodes:
                     self._add_node(NodeRecord(
                         id=url_id, node_type="URL", class_name=None, method_name=None,
                         file_path=None, start_line=None, end_line=None,
                         label=url, summary=", ".join(m.get("http_methods") or []) or None,
                     ))
-                method_id = _method_node_id(c["class_name"], m["method_name"], "CONTROLLER")
+                method_id = method_node_id(c["class_name"], m["method_name"], "CONTROLLER")
                 self._add_edge(url_id, method_id, "HANDLES")
 
     def _add_sql_and_table_nodes(self) -> None:
         for s in self.sqls:
-            sql_id_full = _sql_node_id(s["namespace"], s["sql_id"])
+            sql_id_full = sql_node_id(s["namespace"], s["sql_id"])
             self._add_node(NodeRecord(
                 id=sql_id_full, node_type="SQL", class_name=None, method_name=s["sql_id"],
                 file_path=s["file_path"], start_line=s["start_line"], end_line=s["end_line"],
                 label=f"{s['namespace']}.{s['sql_id']}", summary=s["sql_type"],
             ))
             for table in s["referenced_tables"]:
-                table_id = _table_node_id(table)
+                table_id = table_node_id(table)
                 if table_id not in self.nodes:
                     self._add_node(NodeRecord(
                         id=table_id, node_type="TABLE", class_name=None, method_name=None,
@@ -171,7 +171,7 @@ class GraphBuilder:
                 self._add_edge(sql_id_full, table_id, "REFERENCES")
 
     def _add_mapper_to_sql_edges(self) -> None:
-        sql_index = {(s["namespace"], s["sql_id"]): _sql_node_id(s["namespace"], s["sql_id"]) for s in self.sqls}
+        sql_index = {(s["namespace"], s["sql_id"]): sql_node_id(s["namespace"], s["sql_id"]) for s in self.sqls}
         for c in self.classes:
             if c["layer"] != "MAPPER":
                 continue
@@ -179,7 +179,7 @@ class GraphBuilder:
             for m in c["methods"]:
                 key = (fqcn, m["method_name"])
                 if key in sql_index:
-                    method_id = _method_node_id(c["class_name"], m["method_name"], "MAPPER")
+                    method_id = method_node_id(c["class_name"], m["method_name"], "MAPPER")
                     self._add_edge(method_id, sql_index[key], "EXECUTES")
 
     def _resolve_target_class(self, source_class: dict, receiver: Optional[str]) -> tuple:
@@ -216,7 +216,7 @@ class GraphBuilder:
             src_layer = c["layer"]
 
             for m in c["methods"]:
-                src_id = _method_node_id(c["class_name"], m["method_name"], src_layer)
+                src_id = method_node_id(c["class_name"], m["method_name"], src_layer)
 
                 for call in m["calls"]:
                     self.stats["calls_examined"] += 1
@@ -227,7 +227,7 @@ class GraphBuilder:
 
                     if kind == "SELF":
                         if method_name in own_methods and method_name != m["method_name"]:
-                            dst_id = _method_node_id(c["class_name"], method_name, src_layer)
+                            dst_id = method_node_id(c["class_name"], method_name, src_layer)
                             self._add_edge(src_id, dst_id, "CALLS")
                             self.stats["calls_resolved"] += 1
                         else:
@@ -270,7 +270,7 @@ class GraphBuilder:
                         )
                         continue
 
-                    dst_id = _method_node_id(target_class["class_name"], method_name, target_layer)
+                    dst_id = method_node_id(target_class["class_name"], method_name, target_layer)
                     self._add_edge(src_id, dst_id, "CALLS")
                     self.stats["calls_resolved"] += 1
 
@@ -286,8 +286,8 @@ class GraphBuilder:
                 for m in iface["methods"]:
                     if m["method_name"] not in impl_methods:
                         continue
-                    src_id = _method_node_id(iface["class_name"], m["method_name"], "SERVICE_INTERFACE")
-                    dst_id = _method_node_id(c["class_name"], m["method_name"], "SERVICE_IMPL")
+                    src_id = method_node_id(iface["class_name"], m["method_name"], "SERVICE_INTERFACE")
+                    dst_id = method_node_id(c["class_name"], m["method_name"], "SERVICE_IMPL")
                     self._add_edge(src_id, dst_id, "IMPLEMENTS")
 
 
@@ -357,13 +357,21 @@ def get_chain(conn: sqlite3.Connection, url: str) -> dict:
     도달 가능한 부분그래프 전체를 반환한다.
     """
     conn.row_factory = sqlite3.Row
-    url_node_id = _url_node_id(url)
-    if conn.execute("SELECT 1 FROM nodes WHERE id=?", (url_node_id,)).fetchone() is None:
+    start_id = url_node_id(url)
+    if conn.execute("SELECT 1 FROM nodes WHERE id=?", (start_id,)).fetchone() is None:
         return {"url": url, "found": False, "nodes": [], "edges": []}
 
+    sub = downstream_subgraph(conn, start_id)
+    return {"url": url, "found": True, "nodes": sub["nodes"], "edges": sub["edges"]}
+
+
+def downstream_subgraph(conn: sqlite3.Connection, start_node_id: str) -> dict:
+    """start_node_id에서 나가는 방향(outgoing) 엣지만 따라가며 도달 가능한 전체
+    부분그래프(노드+엣지)를 반환한다. get_chain()과 인덱서의 "관련 테이블" 역채움이 함께 쓴다."""
+    conn.row_factory = sqlite3.Row
     visited_nodes: dict = {}
     visited_edges: list = []
-    frontier = [url_node_id]
+    frontier = [start_node_id]
 
     while frontier:
         next_frontier = []
@@ -379,7 +387,7 @@ def get_chain(conn: sqlite3.Connection, url: str) -> dict:
                     next_frontier.append(erow["dst_id"])
         frontier = next_frontier
 
-    return {"url": url, "found": True, "nodes": list(visited_nodes.values()), "edges": visited_edges}
+    return {"nodes": list(visited_nodes.values()), "edges": visited_edges}
 
 
 def expand(conn: sqlite3.Connection, node_id: str, depth: int = 1) -> dict:
@@ -431,7 +439,7 @@ def find_node_by_symbol(conn: sqlite3.Connection, class_name: str, method_name: 
 def find_sqls_by_table(conn: sqlite3.Connection, table_name: str) -> list:
     """Text-to-SQL(D9)용: 테이블 -> 관련 SQL 역추적."""
     conn.row_factory = sqlite3.Row
-    table_id = _table_node_id(table_name)
+    table_id = table_node_id(table_name)
     rows = conn.execute(
         """SELECT n.* FROM nodes n
            JOIN edges e ON e.src_id = n.id
