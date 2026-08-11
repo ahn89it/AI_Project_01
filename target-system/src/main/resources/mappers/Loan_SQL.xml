@@ -1,0 +1,110 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="egovframework.library.loan.LoanMapper">
+
+    <!-- 대출 목록: TB_LOAN + TB_BOOK + TB_MEMBER 조인 -->
+    <select id="selectLoanList" parameterType="egovframework.library.loan.LoanSearchVO"
+            resultType="egovframework.library.loan.LoanVO">
+        SELECT
+            L.LOAN_ID     AS loanId,
+            L.BOOK_ID     AS bookId,
+            L.MEMBER_ID   AS memberId,
+            L.LOAN_DATE   AS loanDate,
+            L.DUE_DATE    AS dueDate,
+            L.RETURN_DATE AS returnDate,
+            L.LOAN_STATUS AS loanStatus,
+            L.EXTEND_CNT  AS extendCnt,
+            B.TITLE       AS bookTitle,
+            M.MEMBER_NM   AS memberNm
+        FROM TB_LOAN L
+        JOIN TB_BOOK B ON L.BOOK_ID = B.BOOK_ID
+        JOIN TB_MEMBER M ON L.MEMBER_ID = M.MEMBER_ID
+        <where>
+            <if test="memberId != null and memberId != ''">
+                AND L.MEMBER_ID = #{memberId}
+            </if>
+            <if test="bookId != null and bookId != ''">
+                AND L.BOOK_ID = #{bookId}
+            </if>
+            <if test="loanStatus != null and loanStatus != ''">
+                AND L.LOAN_STATUS = #{loanStatus}
+            </if>
+        </where>
+        ORDER BY L.LOAN_DATE DESC
+        LIMIT #{firstIndex}, #{pageSize}
+    </select>
+
+    <select id="selectLoanListCount" parameterType="egovframework.library.loan.LoanSearchVO" resultType="int">
+        SELECT COUNT(*)
+        FROM TB_LOAN L
+        <where>
+            <if test="memberId != null and memberId != ''">
+                AND L.MEMBER_ID = #{memberId}
+            </if>
+            <if test="bookId != null and bookId != ''">
+                AND L.BOOK_ID = #{bookId}
+            </if>
+            <if test="loanStatus != null and loanStatus != ''">
+                AND L.LOAN_STATUS = #{loanStatus}
+            </if>
+        </where>
+    </select>
+
+    <select id="selectLoan" parameterType="string" resultType="egovframework.library.loan.LoanVO">
+        SELECT
+            L.LOAN_ID     AS loanId,
+            L.BOOK_ID     AS bookId,
+            L.MEMBER_ID   AS memberId,
+            L.LOAN_DATE   AS loanDate,
+            L.DUE_DATE    AS dueDate,
+            L.RETURN_DATE AS returnDate,
+            L.LOAN_STATUS AS loanStatus,
+            L.EXTEND_CNT  AS extendCnt,
+            B.TITLE       AS bookTitle,
+            M.MEMBER_NM   AS memberNm
+        FROM TB_LOAN L
+        JOIN TB_BOOK B ON L.BOOK_ID = B.BOOK_ID
+        JOIN TB_MEMBER M ON L.MEMBER_ID = M.MEMBER_ID
+        WHERE L.LOAN_ID = #{loanId}
+    </select>
+
+    <select id="selectLoanCountByMember" resultType="int">
+        SELECT COUNT(*)
+        FROM TB_LOAN
+        WHERE MEMBER_ID = #{memberId}
+          AND LOAN_STATUS = #{loanStatus}
+    </select>
+
+    <insert id="insertLoan" parameterType="egovframework.library.loan.LoanVO">
+        INSERT INTO TB_LOAN (
+            LOAN_ID, BOOK_ID, MEMBER_ID, LOAN_DATE, DUE_DATE, LOAN_STATUS, EXTEND_CNT
+        ) VALUES (
+            #{loanId}, #{bookId}, #{memberId}, #{loanDate}, #{dueDate}, #{loanStatus}, #{extendCnt}
+        )
+    </insert>
+
+    <update id="updateReturn" parameterType="egovframework.library.loan.LoanVO">
+        UPDATE TB_LOAN
+        SET RETURN_DATE = #{returnDate},
+            LOAN_STATUS = #{loanStatus}
+        WHERE LOAN_ID = #{loanId}
+    </update>
+
+    <update id="updateExtend" parameterType="egovframework.library.loan.LoanVO">
+        UPDATE TB_LOAN
+        SET DUE_DATE = #{dueDate},
+            EXTEND_CNT = #{extendCnt}
+        WHERE LOAN_ID = #{loanId}
+    </update>
+
+    <insert id="insertLoanHist" parameterType="egovframework.library.loan.LoanHistVO">
+        INSERT INTO TB_LOAN_HIST (
+            HIST_ID, LOAN_ID, PROCESS_TYPE, PROCESS_DATETIME, PROCESSOR
+        ) VALUES (
+            #{histId}, #{loanId}, #{processType}, NOW(), #{processor}
+        )
+    </insert>
+
+</mapper>
