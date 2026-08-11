@@ -29,6 +29,7 @@ MAPPER_SQLS_JSON = PARSED_DIR / "mapper_sqls.json"
 
 CHROMA_DIR = DATA_DIR / "chroma"
 SQLITE_DB_PATH = DATA_DIR / "metadata.db"
+GRAPH_DB_PATH = DATA_DIR / "graph.db"
 
 # ---- LLM / 임베딩 ----
 OLLAMA_HOST = os.getenv("OLLAMA_HOST", "http://localhost:11434")
