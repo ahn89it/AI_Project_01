@@ -1,0 +1,81 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="egovframework.library.member.MemberMapper">
+
+    <select id="selectMemberList" parameterType="egovframework.library.member.MemberSearchVO"
+            resultType="egovframework.library.member.MemberVO">
+        SELECT
+            MEMBER_ID     AS memberId,
+            MEMBER_NM     AS memberNm,
+            BIRTH_DATE    AS birthDate,
+            PHONE         AS phone,
+            EMAIL         AS email,
+            MEMBER_STATUS AS memberStatus,
+            JOIN_DATE     AS joinDate
+        FROM TB_MEMBER
+        <where>
+            <if test="memberNm != null and memberNm != ''">
+                AND MEMBER_NM LIKE CONCAT('%', #{memberNm}, '%')
+            </if>
+            <if test="memberStatus != null and memberStatus != ''">
+                AND MEMBER_STATUS = #{memberStatus}
+            </if>
+        </where>
+        ORDER BY JOIN_DATE DESC
+        LIMIT #{firstIndex}, #{pageSize}
+    </select>
+
+    <select id="selectMemberListCount" parameterType="egovframework.library.member.MemberSearchVO" resultType="int">
+        SELECT COUNT(*)
+        FROM TB_MEMBER
+        <where>
+            <if test="memberNm != null and memberNm != ''">
+                AND MEMBER_NM LIKE CONCAT('%', #{memberNm}, '%')
+            </if>
+            <if test="memberStatus != null and memberStatus != ''">
+                AND MEMBER_STATUS = #{memberStatus}
+            </if>
+        </where>
+    </select>
+
+    <select id="selectMember" parameterType="string" resultType="egovframework.library.member.MemberVO">
+        SELECT
+            MEMBER_ID     AS memberId,
+            MEMBER_NM     AS memberNm,
+            BIRTH_DATE    AS birthDate,
+            PHONE         AS phone,
+            EMAIL         AS email,
+            MEMBER_STATUS AS memberStatus,
+            JOIN_DATE     AS joinDate
+        FROM TB_MEMBER
+        WHERE MEMBER_ID = #{memberId}
+    </select>
+
+    <insert id="insertMember" parameterType="egovframework.library.member.MemberVO">
+        INSERT INTO TB_MEMBER (
+            MEMBER_ID, MEMBER_NM, BIRTH_DATE, PHONE, EMAIL, MEMBER_STATUS, JOIN_DATE
+        ) VALUES (
+            #{memberId}, #{memberNm}, #{birthDate}, #{phone}, #{email}, #{memberStatus}, NOW()
+        )
+    </insert>
+
+    <update id="updateMember" parameterType="egovframework.library.member.MemberVO">
+        UPDATE TB_MEMBER
+        SET MEMBER_NM = #{memberNm},
+            BIRTH_DATE = #{birthDate},
+            PHONE = #{phone},
+            EMAIL = #{email}
+        WHERE MEMBER_ID = #{memberId}
+    </update>
+
+    <delete id="deleteMember" parameterType="string">
+        DELETE FROM TB_MEMBER WHERE MEMBER_ID = #{memberId}
+    </delete>
+
+    <update id="updateMemberStatus">
+        UPDATE TB_MEMBER SET MEMBER_STATUS = #{memberStatus} WHERE MEMBER_ID = #{memberId}
+    </update>
+
+</mapper>
