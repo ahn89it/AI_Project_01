@@ -1,6 +1,8 @@
 .venv/
 .claude/
 __pycache__/
+target-system/target/
+*.class
 *.pyc
 .env
 data/
