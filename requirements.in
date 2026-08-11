@@ -1,0 +1,13 @@
+fastapi
+uvicorn[standard]
+streamlit
+chromadb
+sentence-transformers
+tree-sitter
+tree-sitter-java
+sqlglot
+pymysql
+python-dotenv
+httpx
+pydantic
+pytest
