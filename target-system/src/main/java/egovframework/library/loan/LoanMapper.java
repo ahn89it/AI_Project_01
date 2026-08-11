@@ -27,5 +27,10 @@ public interface LoanMapper {
 
     void updateExtend(LoanVO loanVO);
 
+    /**
+     * 대출상태만 별도로 변경. 연체 상태 일괄 갱신 배치(overdue 도메인)에서 사용.
+     */
+    void updateLoanStatus(@Param("loanId") String loanId, @Param("loanStatus") String loanStatus);
+
     void insertLoanHist(LoanHistVO loanHistVO);
 }

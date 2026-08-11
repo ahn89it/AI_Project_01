@@ -1,0 +1,133 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="egovframework.library.overdue.OverdueMapper">
+
+    <!-- 연체자 목록: TB_OVERDUE + TB_LOAN + TB_MEMBER + TB_BOOK 4개 테이블 조인 -->
+    <select id="selectOverdueList" parameterType="egovframework.library.overdue.OverdueSearchVO"
+            resultType="egovframework.library.overdue.OverdueVO">
+        SELECT
+            O.OVERDUE_ID         AS overdueId,
+            O.LOAN_ID            AS loanId,
+            O.OVERDUE_START_DATE AS overdueStartDate,
+            O.OVERDUE_DAYS       AS overdueDays,
+            O.RELEASE_DATE       AS releaseDate,
+            O.SANCTION_STATUS    AS sanctionStatus,
+            M.MEMBER_ID          AS memberId,
+            M.MEMBER_NM          AS memberNm,
+            B.TITLE              AS bookTitle
+        FROM TB_OVERDUE O
+        JOIN TB_LOAN L ON O.LOAN_ID = L.LOAN_ID
+        JOIN TB_MEMBER M ON L.MEMBER_ID = M.MEMBER_ID
+        JOIN TB_BOOK B ON L.BOOK_ID = B.BOOK_ID
+        <where>
+            <if test="memberId != null and memberId != ''">
+                AND M.MEMBER_ID = #{memberId}
+            </if>
+            <if test="sanctionStatus != null and sanctionStatus != ''">
+                AND O.SANCTION_STATUS = #{sanctionStatus}
+            </if>
+        </where>
+        ORDER BY O.OVERDUE_START_DATE DESC
+        LIMIT #{firstIndex}, #{pageSize}
+    </select>
+
+    <select id="selectOverdueListCount" parameterType="egovframework.library.overdue.OverdueSearchVO" resultType="int">
+        SELECT COUNT(*)
+        FROM TB_OVERDUE O
+        JOIN TB_LOAN L ON O.LOAN_ID = L.LOAN_ID
+        JOIN TB_MEMBER M ON L.MEMBER_ID = M.MEMBER_ID
+        <where>
+            <if test="memberId != null and memberId != ''">
+                AND M.MEMBER_ID = #{memberId}
+            </if>
+            <if test="sanctionStatus != null and sanctionStatus != ''">
+                AND O.SANCTION_STATUS = #{sanctionStatus}
+            </if>
+        </where>
+    </select>
+
+    <select id="selectOverdue" parameterType="string" resultType="egovframework.library.overdue.OverdueVO">
+        SELECT
+            O.OVERDUE_ID         AS overdueId,
+            O.LOAN_ID            AS loanId,
+            O.OVERDUE_START_DATE AS overdueStartDate,
+            O.OVERDUE_DAYS       AS overdueDays,
+            O.RELEASE_DATE       AS releaseDate,
+            O.SANCTION_STATUS    AS sanctionStatus,
+            M.MEMBER_ID          AS memberId,
+            M.MEMBER_NM          AS memberNm,
+            B.TITLE              AS bookTitle
+        FROM TB_OVERDUE O
+        JOIN TB_LOAN L ON O.LOAN_ID = L.LOAN_ID
+        JOIN TB_MEMBER M ON L.MEMBER_ID = M.MEMBER_ID
+        JOIN TB_BOOK B ON L.BOOK_ID = B.BOOK_ID
+        WHERE O.OVERDUE_ID = #{overdueId}
+    </select>
+
+    <select id="selectOverdueByMember" parameterType="string" resultType="egovframework.library.overdue.OverdueVO">
+        SELECT
+            O.OVERDUE_ID         AS overdueId,
+            O.LOAN_ID            AS loanId,
+            O.OVERDUE_START_DATE AS overdueStartDate,
+            O.OVERDUE_DAYS       AS overdueDays,
+            O.RELEASE_DATE       AS releaseDate,
+            O.SANCTION_STATUS    AS sanctionStatus,
+            M.MEMBER_ID          AS memberId,
+            M.MEMBER_NM          AS memberNm,
+            B.TITLE              AS bookTitle
+        FROM TB_OVERDUE O
+        JOIN TB_LOAN L ON O.LOAN_ID = L.LOAN_ID
+        JOIN TB_MEMBER M ON L.MEMBER_ID = M.MEMBER_ID
+        JOIN TB_BOOK B ON L.BOOK_ID = B.BOOK_ID
+        WHERE M.MEMBER_ID = #{memberId}
+        ORDER BY O.OVERDUE_START_DATE DESC
+    </select>
+
+    <insert id="insertOverdue" parameterType="egovframework.library.overdue.OverdueVO">
+        INSERT INTO TB_OVERDUE (
+            OVERDUE_ID, LOAN_ID, OVERDUE_START_DATE, OVERDUE_DAYS, SANCTION_STATUS
+        ) VALUES (
+            #{overdueId}, #{loanId}, #{overdueStartDate}, #{overdueDays}, #{sanctionStatus}
+        )
+    </insert>
+
+    <update id="updateRelease" parameterType="egovframework.library.overdue.OverdueVO">
+        UPDATE TB_OVERDUE
+        SET RELEASE_DATE = #{releaseDate},
+            SANCTION_STATUS = #{sanctionStatus}
+        WHERE OVERDUE_ID = #{overdueId}
+    </update>
+
+    <update id="updateOverdueDays">
+        UPDATE TB_OVERDUE SET OVERDUE_DAYS = #{overdueDays} WHERE OVERDUE_ID = #{overdueId}
+    </update>
+
+    <!-- 반납예정일이 지났지만(=오늘 기준) 아직 연체 등록이 안 된 대출중(LOAN_STATUS=1) 건 -->
+    <select id="selectOverdueTargetLoans" resultType="egovframework.library.loan.LoanVO">
+        SELECT
+            L.LOAN_ID   AS loanId,
+            L.BOOK_ID   AS bookId,
+            L.MEMBER_ID AS memberId,
+            L.LOAN_DATE AS loanDate,
+            L.DUE_DATE  AS dueDate
+        FROM TB_LOAN L
+        LEFT JOIN TB_OVERDUE O ON L.LOAN_ID = O.LOAN_ID
+        WHERE L.LOAN_STATUS = '1'
+          AND L.DUE_DATE &lt; CURDATE()
+          AND O.OVERDUE_ID IS NULL
+    </select>
+
+    <select id="selectActiveOverdueList" resultType="egovframework.library.overdue.OverdueVO">
+        SELECT
+            OVERDUE_ID         AS overdueId,
+            LOAN_ID            AS loanId,
+            OVERDUE_START_DATE AS overdueStartDate,
+            OVERDUE_DAYS       AS overdueDays,
+            SANCTION_STATUS    AS sanctionStatus
+        FROM TB_OVERDUE
+        WHERE SANCTION_STATUS = '1'
+    </select>
+
+</mapper>

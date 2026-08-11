@@ -99,6 +99,10 @@
         WHERE LOAN_ID = #{loanId}
     </update>
 
+    <update id="updateLoanStatus">
+        UPDATE TB_LOAN SET LOAN_STATUS = #{loanStatus} WHERE LOAN_ID = #{loanId}
+    </update>
+
     <insert id="insertLoanHist" parameterType="egovframework.library.loan.LoanHistVO">
         INSERT INTO TB_LOAN_HIST (
             HIST_ID, LOAN_ID, PROCESS_TYPE, PROCESS_DATETIME, PROCESSOR
