@@ -1,0 +1,117 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="egovframework.library.book.BookMapper">
+
+    <select id="selectBookList" parameterType="egovframework.library.book.BookSearchVO"
+            resultType="egovframework.library.book.BookVO">
+        SELECT
+            B.BOOK_ID       AS bookId,
+            B.ISBN          AS isbn,
+            B.TITLE         AS title,
+            B.AUTHOR        AS author,
+            B.PUBLISHER     AS publisher,
+            B.PUBLISH_DATE  AS publishDate,
+            B.CATEGORY_CD   AS categoryCd,
+            C.CATEGORY_NM   AS categoryNm,
+            B.LOCATION      AS location,
+            B.LOAN_YN       AS loanYn,
+            B.REG_DATE      AS regDate
+        FROM TB_BOOK B
+        LEFT JOIN TB_CATEGORY C ON B.CATEGORY_CD = C.CATEGORY_CD
+        <where>
+            <if test="title != null and title != ''">
+                AND B.TITLE LIKE CONCAT('%', #{title}, '%')
+            </if>
+            <if test="author != null and author != ''">
+                AND B.AUTHOR LIKE CONCAT('%', #{author}, '%')
+            </if>
+            <if test="categoryCd != null and categoryCd != ''">
+                AND B.CATEGORY_CD = #{categoryCd}
+            </if>
+            <if test="loanYn != null and loanYn != ''">
+                AND B.LOAN_YN = #{loanYn}
+            </if>
+        </where>
+        ORDER BY B.REG_DATE DESC
+        LIMIT #{firstIndex}, #{pageSize}
+    </select>
+
+    <select id="selectBookListCount" parameterType="egovframework.library.book.BookSearchVO" resultType="int">
+        SELECT COUNT(*)
+        FROM TB_BOOK B
+        <where>
+            <if test="title != null and title != ''">
+                AND B.TITLE LIKE CONCAT('%', #{title}, '%')
+            </if>
+            <if test="author != null and author != ''">
+                AND B.AUTHOR LIKE CONCAT('%', #{author}, '%')
+            </if>
+            <if test="categoryCd != null and categoryCd != ''">
+                AND B.CATEGORY_CD = #{categoryCd}
+            </if>
+            <if test="loanYn != null and loanYn != ''">
+                AND B.LOAN_YN = #{loanYn}
+            </if>
+        </where>
+    </select>
+
+    <select id="selectBook" parameterType="string" resultType="egovframework.library.book.BookVO">
+        SELECT
+            B.BOOK_ID       AS bookId,
+            B.ISBN          AS isbn,
+            B.TITLE         AS title,
+            B.AUTHOR        AS author,
+            B.PUBLISHER     AS publisher,
+            B.PUBLISH_DATE  AS publishDate,
+            B.CATEGORY_CD   AS categoryCd,
+            C.CATEGORY_NM   AS categoryNm,
+            B.LOCATION      AS location,
+            B.LOAN_YN       AS loanYn,
+            B.REG_DATE      AS regDate
+        FROM TB_BOOK B
+        LEFT JOIN TB_CATEGORY C ON B.CATEGORY_CD = C.CATEGORY_CD
+        WHERE B.BOOK_ID = #{bookId}
+    </select>
+
+    <select id="selectCategoryList" resultType="egovframework.library.book.CategoryVO">
+        SELECT
+            CATEGORY_CD       AS categoryCd,
+            CATEGORY_NM       AS categoryNm,
+            UPPER_CATEGORY_CD AS upperCategoryCd
+        FROM TB_CATEGORY
+        ORDER BY CATEGORY_CD
+    </select>
+
+    <insert id="insertBook" parameterType="egovframework.library.book.BookVO">
+        INSERT INTO TB_BOOK (
+            BOOK_ID, ISBN, TITLE, AUTHOR, PUBLISHER, PUBLISH_DATE,
+            CATEGORY_CD, LOCATION, LOAN_YN, REG_DATE
+        ) VALUES (
+            #{bookId}, #{isbn}, #{title}, #{author}, #{publisher}, #{publishDate},
+            #{categoryCd}, #{location}, #{loanYn}, NOW()
+        )
+    </insert>
+
+    <update id="updateBook" parameterType="egovframework.library.book.BookVO">
+        UPDATE TB_BOOK
+        SET ISBN = #{isbn},
+            TITLE = #{title},
+            AUTHOR = #{author},
+            PUBLISHER = #{publisher},
+            PUBLISH_DATE = #{publishDate},
+            CATEGORY_CD = #{categoryCd},
+            LOCATION = #{location}
+        WHERE BOOK_ID = #{bookId}
+    </update>
+
+    <delete id="deleteBook" parameterType="string">
+        DELETE FROM TB_BOOK WHERE BOOK_ID = #{bookId}
+    </delete>
+
+    <update id="updateLoanYn">
+        UPDATE TB_BOOK SET LOAN_YN = #{loanYn} WHERE BOOK_ID = #{bookId}
+    </update>
+
+</mapper>
