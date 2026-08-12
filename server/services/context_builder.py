@@ -19,7 +19,12 @@ import sqlite3
 from dataclasses import dataclass
 from typing import Optional
 
-from analyzer.callgraph import downstream_subgraph, full_chain_for_node, upstream_subgraph
+from analyzer.callgraph import (
+    downstream_subgraph,
+    find_node_by_symbol,
+    full_chain_for_node,
+    upstream_subgraph,
+)
 from server.config import GRAPH_DB_PATH, JAVA_SYMBOLS_JSON, TARGET_SYSTEM_DIR
 from server.services.retriever import search
 
@@ -245,3 +250,138 @@ def build_context(question: str) -> Context:
 
     context_text = "\n\n---\n\n".join(blocks)
     return Context(text=context_text, references=references, chain_summary=chain_summary, truncated=truncated)
+
+
+# ---------------------------------------------------------------------------
+# D8 장애 진단용 컨텍스트 조립
+# ---------------------------------------------------------------------------
+
+_CALL_CHAIN_TYPE_ORDER = ["URL", "CONTROLLER_METHOD", "SERVICE_METHOD", "IMPL_METHOD", "MAPPER_METHOD"]
+
+
+@dataclass
+class DiagnoseContext:
+    text: str
+    references: list
+    call_chain: list
+    error_location: Optional[dict]
+    fallback_used: bool
+    line_mismatch_warning: Optional[str]
+    found: bool
+
+
+def _read_source_lines_marked(file_path: str, start_line: int, end_line: int, marker_line: int) -> str:
+    full_path = TARGET_SYSTEM_DIR / file_path
+    lines = full_path.read_text(encoding="utf-8").splitlines()
+    out = []
+    for i in range(start_line, end_line + 1):
+        text = lines[i - 1]
+        out.append(f">>> {text}" if i == marker_line else f"    {text}")
+    return "\n".join(out)
+
+
+def build_diagnose_context(parsed) -> DiagnoseContext:
+    """스택트레이스 파싱 결과(parsed: stacktrace_parser.ParsedStackTrace)로 진단용 컨텍스트를 만든다.
+
+    a) origin_frame(우리 코드 중 가장 깊은 프레임)을 find_node_by_symbol로 그래프 노드 매핑
+       - 라인번호가 메서드 시작/끝 범위 밖이면 경고를 남기되 진단은 계속 진행
+       - 매핑 실패 시 클래스명으로 벡터 검색 폴백
+    b) 발생 지점 메서드 전체 코드(>>> 마커 포함) + 상류(호출자) + 하류(Mapper/SQL) 수집
+    """
+    if parsed.origin_frame is None:
+        return DiagnoseContext(
+            text="", references=[], call_chain=[], error_location=None,
+            fallback_used=False, line_mismatch_warning=None, found=False,
+        )
+
+    conn = sqlite3.connect(GRAPH_DB_PATH)
+    conn.row_factory = sqlite3.Row
+    try:
+        origin_node = find_node_by_symbol(conn, parsed.origin_frame.class_name, parsed.origin_frame.method_name)
+        fallback_used = False
+        line_mismatch_warning = None
+
+        if origin_node is None:
+            fallback_used = True
+            hits = search(f"{parsed.origin_frame.class_name} {parsed.origin_frame.method_name}", top_k=1)
+            if not hits:
+                return DiagnoseContext(
+                    text="", references=[], call_chain=[], error_location=None,
+                    fallback_used=True, line_mismatch_warning=None, found=False,
+                )
+            row = conn.execute("SELECT * FROM nodes WHERE id=?", (hits[0].node_id,)).fetchone()
+            origin_node = _row_to_dict(row)
+        else:
+            if not (origin_node["start_line"] <= parsed.origin_frame.line_number <= origin_node["end_line"]):
+                line_mismatch_warning = (
+                    f"에러 로그의 라인번호({parsed.origin_frame.line_number})가 매핑된 메서드의 실제 "
+                    f"범위({origin_node['start_line']}-{origin_node['end_line']})를 벗어납니다. "
+                    "소스가 로그 채집 이후 변경되었을 수 있어, 참고용으로만 사용하세요."
+                )
+
+        # 발생 라인 마커: 실제 범위를 벗어나면 메서드 시작 라인을 대신 표시
+        marker_line = parsed.origin_frame.line_number
+        if not (origin_node["start_line"] <= marker_line <= origin_node["end_line"]):
+            marker_line = origin_node["start_line"]
+
+        sub = full_chain_for_node(conn, origin_node["id"])
+        all_nodes = {n["id"]: n for n in sub["nodes"]}
+        all_nodes[origin_node["id"]] = origin_node
+
+        chain_summary = _build_chain_summary(list(all_nodes.values()))
+
+        code_items = [
+            (TIER_HIT if nid == origin_node["id"] else TIER_OTHER, node)
+            for nid, node in all_nodes.items()
+            if node["node_type"] in _CODE_NODE_TYPES
+        ]
+        code_items.sort(key=lambda t: (t[0], t[1]["file_path"] or "", t[1]["start_line"] or 0))
+
+        blocks = [chain_summary]
+        references: list = []
+        used_chars = len(chain_summary)
+
+        for tier, node in code_items:
+            try:
+                if node["id"] == origin_node["id"]:
+                    code = _read_source_lines_marked(node["file_path"], node["start_line"], node["end_line"], marker_line)
+                else:
+                    code = _read_source_lines(node["file_path"], node["start_line"], node["end_line"])
+            except Exception:
+                logger.warning("소스 라인 읽기 실패, 건너뜀: %s", node["id"], exc_info=True)
+                continue
+
+            label = _class_method_label(node)
+            header = f"[{node['file_path']}:{node['start_line']}-{node['end_line']}] {_LAYER_LABEL[node['node_type']]}/{label}"
+            block = f"{header}\n{code}"
+
+            if used_chars + len(block) > MAX_CONTEXT_CHARS:
+                logger.warning("진단 컨텍스트 예산 초과로 블록 생략: %s", node["id"])
+                continue
+
+            blocks.append(block)
+            used_chars += len(block)
+            references.append(Reference(
+                file=node["file_path"], line_start=node["start_line"], line_end=node["end_line"],
+                class_method=label, snippet=code.strip()[:200],
+            ))
+
+        call_chain = []
+        for node_type in _CALL_CHAIN_TYPE_ORDER:
+            for label in sorted({n["label"] for n in all_nodes.values() if n["node_type"] == node_type}):
+                call_chain.append(label)
+
+        error_location = {
+            "file": origin_node["file_path"],
+            "line": parsed.origin_frame.line_number,
+            "class_method": _class_method_label(origin_node),
+        }
+
+        context_text = "\n\n---\n\n".join(blocks)
+        return DiagnoseContext(
+            text=context_text, references=references, call_chain=call_chain,
+            error_location=error_location, fallback_used=fallback_used,
+            line_mismatch_warning=line_mismatch_warning, found=True,
+        )
+    finally:
+        conn.close()

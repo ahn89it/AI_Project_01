@@ -21,6 +21,10 @@ DB_SCHEMA_SQL = TARGET_SYSTEM_DIR / "db" / "schema.sql"
 ANALYZER_EXCLUDE_NAMES = {"BUGS.md"}
 ANALYZER_EXCLUDE_DIRS = {"demo"}
 
+# 장애 진단(D8) 스택트레이스 파싱 시 "우리 코드" 프레임만 남기고 나머지(Spring/Tomcat/JDK)를
+# 버리기 위한 패키지 접두사
+DIAGNOSE_TARGET_PACKAGE_PREFIX = os.getenv("DIAGNOSE_TARGET_PACKAGE_PREFIX", "egovframework.library")
+
 # ---- 산출물 저장 위치 ----
 DATA_DIR = Path(os.getenv("DATA_DIR", str(PROJECT_ROOT / "data")))
 PARSED_DIR = DATA_DIR / "parsed"
