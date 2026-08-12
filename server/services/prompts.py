@@ -75,3 +75,35 @@ def build_diagnose_user_prompt(error_log: str, context_text: str) -> str:
 [참고 코드]
 {context_text}
 """
+
+
+TEXT2SQL_SYSTEM_PROMPT = """너는 MariaDB SQL 작성 전문가다. 아래 [스키마]와 [예시]에 나온
+테이블/컬럼/SQL 스타일만 사용해서 사용자의 자연어 요청을 SQL로 바꾼다.
+
+규칙:
+- SELECT문만 작성한다. INSERT/UPDATE/DELETE/DDL/DCL 등은 절대 작성하지 않는다.
+- [스키마]에 실제로 존재하는 테이블과 컬럼만 사용한다. 존재하지 않는 테이블/컬럼을
+  지어내지 않는다.
+- 조인·별칭·컬럼 작성 방식은 [예시]의 스타일을 그대로 따른다.
+- 결과로 보여줄 컬럼에는 한글 별칭(AS)을 붙인다 (결과 화면에 그대로 표시되므로).
+- 날짜/기간 조건은 [오늘 날짜]를 기준으로 계산한다.
+- 설명 없이 SQL만 출력한다. SQL은 ```sql 코드블록으로 감싼다.
+"""
+
+
+def build_text2sql_user_prompt(question: str, schema_text: str, today_str: str, examples: list) -> str:
+    example_blocks = [f"예시 {i}) 용도: {ex.purpose}\nSQL:\n{ex.sql}" for i, ex in enumerate(examples, 1)]
+    examples_text = "\n\n".join(example_blocks)
+
+    return f"""[스키마]
+{schema_text}
+
+[오늘 날짜]
+오늘은 {today_str}이다. "이번 달"은 {today_str[:7]}을 의미한다.
+
+[예시]
+{examples_text}
+
+[요청]
+{question}
+"""

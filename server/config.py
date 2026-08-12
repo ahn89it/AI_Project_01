@@ -46,3 +46,10 @@ TARGET_DB_PORT = int(os.getenv("TARGET_DB_PORT", "3307"))
 TARGET_DB_NAME = os.getenv("TARGET_DB_NAME", "library_db")
 TARGET_DB_USER = os.getenv("TARGET_DB_USER", "ai_reader")
 TARGET_DB_PASSWORD = os.getenv("TARGET_DB_PASSWORD", "ChangeMe_AiReader!2026")
+TARGET_DB_QUERY_TIMEOUT_SEC = int(os.getenv("TARGET_DB_QUERY_TIMEOUT_SEC", "10"))
+
+# ---- Text-to-SQL (D9) ----
+# 시연 데이터(D3 시딩)가 2026-08 기준으로 만들어져 있어, "이번 달" 같은 상대 날짜 질의가
+# 맞으려면 LLM에게 프로젝트의 기준일을 명시적으로 주입해야 한다 (실제 시스템 시계가 아님).
+TEXT2SQL_DEMO_TODAY = os.getenv("TEXT2SQL_DEMO_TODAY", "2026-08-19")
+TEXT2SQL_MAX_ROW_LIMIT = int(os.getenv("TEXT2SQL_MAX_ROW_LIMIT", "100"))
