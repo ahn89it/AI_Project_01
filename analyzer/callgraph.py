@@ -390,6 +390,52 @@ def downstream_subgraph(conn: sqlite3.Connection, start_node_id: str) -> dict:
     return {"nodes": list(visited_nodes.values()), "edges": visited_edges}
 
 
+def upstream_subgraph(conn: sqlite3.Connection, start_node_id: str) -> dict:
+    """start_node_id로 들어오는 방향(incoming) 엣지만 거슬러 올라가며 도달 가능한 전체
+    부분그래프(노드+엣지)를 반환한다. downstream_subgraph()의 반대 방향."""
+    conn.row_factory = sqlite3.Row
+    visited_nodes: dict = {}
+    visited_edges: list = []
+    frontier = [start_node_id]
+
+    while frontier:
+        next_frontier = []
+        for nid in frontier:
+            if nid in visited_nodes:
+                continue
+            row = conn.execute("SELECT * FROM nodes WHERE id=?", (nid,)).fetchone()
+            if row is not None:
+                visited_nodes[nid] = _row_to_dict(row)
+            for erow in conn.execute("SELECT * FROM edges WHERE dst_id=?", (nid,)).fetchall():
+                visited_edges.append(_row_to_dict(erow))
+                if erow["src_id"] not in visited_nodes:
+                    next_frontier.append(erow["src_id"])
+        frontier = next_frontier
+
+    return {"nodes": list(visited_nodes.values()), "edges": visited_edges}
+
+
+def full_chain_for_node(conn: sqlite3.Connection, node_id: str) -> dict:
+    """node_id 기준 상류(누가 이걸 호출하는지) + 하류(이게 무엇을 호출하는지)를 모두 합친
+    부분그래프를 반환한다. 벡터 검색 히트가 Controller/ServiceImpl/SQL 무엇이든
+    "URL부터 테이블까지"의 완결된 흐름으로 확장하기 위해 D7 context_builder가 사용한다."""
+    down = downstream_subgraph(conn, node_id)
+    up = upstream_subgraph(conn, node_id)
+
+    nodes: dict = {n["id"]: n for n in down["nodes"]}
+    nodes.update({n["id"]: n for n in up["nodes"]})
+
+    edge_keys = set()
+    edges = []
+    for e in down["edges"] + up["edges"]:
+        key = (e["src_id"], e["dst_id"], e["edge_type"])
+        if key not in edge_keys:
+            edge_keys.add(key)
+            edges.append(e)
+
+    return {"nodes": list(nodes.values()), "edges": edges}
+
+
 def expand(conn: sqlite3.Connection, node_id: str, depth: int = 1) -> dict:
     """특정 노드 기준 상하류(양방향)를 depth 홉까지 확장한다."""
     conn.row_factory = sqlite3.Row
