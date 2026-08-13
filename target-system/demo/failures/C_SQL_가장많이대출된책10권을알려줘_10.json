@@ -1,0 +1,26 @@
+{
+  "category": "C_SQL_가장 많이 대출된 책 10권을 알려줘",
+  "detail": "row_count=0 (최소 1 미만)",
+  "status_code": 200,
+  "request": {
+    "method": "POST",
+    "path": "/api/text2sql",
+    "json": {
+      "question": "가장 많이 대출된 책 10권을 알려줘"
+    }
+  },
+  "response": {
+    "sql": "SELECT B.BOOK_ID AS bookId, B.ISBN AS isbn, B.TITLE AS title, COUNT(L.LOAN_ID) AS loanCount FROM TB_BOOK AS B LEFT JOIN TB_LOAN AS L ON B.BOOK_ID = L.BOOK_ID LEFT JOIN TB_CATEGORY AS C ON B.CATEGORY_CD = C.CATEGORY_CD WHERE B.LOAN_YN = 'Y' AND DATE(L.LOAN_DATE) BETWEEN '2026-08-01' AND '2026-08-31' GROUP BY B.BOOK_ID, B.ISBN, B.TITLE, C.CATEGORY_NM ORDER BY loanCount DESC LIMIT 10",
+    "columns": [
+      "bookId",
+      "isbn",
+      "title",
+      "loanCount"
+    ],
+    "rows": [],
+    "row_count": 0,
+    "retried": false,
+    "guard_notes": [],
+    "elapsed_ms": 7928
+  }
+}

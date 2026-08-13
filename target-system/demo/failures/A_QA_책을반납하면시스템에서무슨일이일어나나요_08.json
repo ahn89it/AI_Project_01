@@ -1,0 +1,110 @@
+{
+  "category": "A_QA_책을 반납하면 시스템에서 무슨 일이 일어나나요?",
+  "detail": "키워드 그룹 누락: ['정지', '이력']",
+  "status_code": 200,
+  "request": {
+    "method": "POST",
+    "path": "/api/rag/ask",
+    "json": {
+      "question": "책을 반납하면 시스템에서 무슨 일이 일어나나요?"
+    }
+  },
+  "response": {
+    "answer": "1) **처리 흐름 요약**\n   - 사용자가 책을 반납하면 `/loan/updateReturn.do` 엔드포인트를 통해 `LoanServiceImpl.updateReturn` 메서드가 호출됩니다.\n   - 이 메서드는 반납된 대출 정보를 업데이트하고, 연체 여부를 확인한 후 필요한 조치를 취합니다.\n\n2) **상세 설명**\n   - **대출 정보 업데이트**: 반납된 대출 정보의 `returnDate`와 `loanStatus`를 업데이트합니다. 예를 들어, `loanStatus`는 `RETURNED`로 변경됩니다.\n   - **도서 상태 복원**: 반납된 책의 `LOAN_YN` 필드를 `Y`로 변경하여 도서가 다시 대출 가능 상태로 설정됩니다.\n   - **연체 확인 및 처리**: 반납 날짜가 대출 기한(`DueDate`)을 초과했는지 확인합니다.\n     - 만약 연체일이 발생했다면, `OverdueVO` 객체를 생성하여 연체 정보를 기록합니다.\n     - 연체 상태에 따라 회원의 `MEMBER_ID`에 대한 대출 상태를 확인하고 필요한 경우 회원 상태를 `SUSPENDED`로 변경할 수 있습니다 (현재 코드에서는 명시적으로 회원 상태 변경은 보이지 않지만, 시스템 로직에 따라 가능합니다).\n   - **예외 처리**: 만약 대출 정보를 찾을 수 없다면 `DataNotFoundException`을 발생시킵니다.\n\n3) **코드 예시**\n   - `LoanServiceImpl.updateReturn` 메서드에서 주요 동작은 다음과 같습니다:\n     ```java\n     public void updateReturn(LoanVO loanVO) {\n         // 대출 정보 업데이트\n         loanMapper.updateReturn(loanVO);\n\n         // 반납 날짜와 상태 업데이트\n         loanVO.setReturnDate(new Date());\n         loanVO.setLoanStatus(LoanStatus.RETURNED.getCode());\n\n         // 연체 여부 확인\n         if (loanVO.getDueDate().before(loanVO.getReturnDate())) {\n             // 연체 처리 로직 (예시로 추가 코드만 제시)\n             handleOverdue(loanVO);\n         }\n     }\n\n     private void handleOverdue(LoanVO loanVO) {\n         // 연체 정보 기록 로직\n         OverdueVO overdueVO = new OverdueVO();\n         overdueVO.setBookId(loanVO.getBookId());\n         overdueVO.setMemberId(loanVO.getMemberId());\n         // 오버로드 처리 로직 구현 (예시로 생략)\n         overdueMapper.insertOverdue(overdueVO);\n\n         // 회원 상태 업데이트 (예시로 생략)\n         MemberStatus memberStatus = MemberStatus.fromCode(loanVO.getMemberId());\n         if (memberStatus != null && memberStatus == MemberStatus.NORMAL) {\n             memberMapper.updateMemberStatus(loanVO.getMemberId(), MemberStatus.SUSPENDED.getCode());\n         }\n     }\n     ```\n\n이러한 과정을 통해 시스템은 책의 반납 상태를 업데이트하고, 필요한 경우 연체 처리와 회원 상태 변경을 수행합니다.",
+    "references": [
+      {
+        "file": "src/main/java/egovframework/library/cmmn/util/LibraryConstants.java",
+        "line_start": 6,
+        "line_end": 19,
+        "class_method": "LibraryConstants",
+        "snippet": "public final class LibraryConstants {\n\n    /** 1인당 최대 동시 대출 가능 권수 */\n    public static final int MAX_LOAN_COUNT = 5;\n\n    /** 기본 대출 기간(일) */\n    public static final int LOAN_PERIOD_DAYS = 14;\n\n    /**"
+      },
+      {
+        "file": "src/main/java/egovframework/library/loan/LoanServiceImpl.java",
+        "line_start": 58,
+        "line_end": 97,
+        "class_method": "LoanServiceImpl.insertLoan",
+        "snippet": "@Override\n    @Transactional\n    public LoanResultVO insertLoan(LoanVO loanVO) {\n        // 회원 상태 확인 - 연체 중인 회원은 대출 불가 처리\n        MemberVO member = memberMapper.selectMember(loanVO.getMemberId());\n   "
+      },
+      {
+        "file": "src/main/java/egovframework/library/loan/LoanServiceImpl.java",
+        "line_start": 99,
+        "line_end": 135,
+        "class_method": "LoanServiceImpl.updateReturn",
+        "snippet": "@Override\n    @Transactional\n    public void updateReturn(String loanId) {\n        LoanVO loan = selectLoan(loanId);\n\n        Date returnDate = new Date();\n        loan.setReturnDate(returnDate);\n    "
+      },
+      {
+        "file": "src/main/java/egovframework/library/loan/LoanStatus.java",
+        "line_start": 6,
+        "line_end": 27,
+        "class_method": "LoanStatus",
+        "snippet": "public enum LoanStatus {\n\n    LOANED(\"1\", \"대출중\"),\n    RETURNED(\"2\", \"반납완료\"),\n    OVERDUE(\"3\", \"연체중\");\n\n    private final String code;\n    private final String label;\n\n    LoanStatus(String code, Strin"
+      },
+      {
+        "file": "src/main/java/egovframework/library/member/MemberStatus.java",
+        "line_start": 6,
+        "line_end": 36,
+        "class_method": "MemberStatus",
+        "snippet": "public enum MemberStatus {\n\n    NORMAL(\"1\", \"정상\"),\n    SUSPENDED(\"2\", \"대출정지\"),\n    WITHDRAWN(\"9\", \"탈퇴\");\n\n    private final String code;\n    private final String label;\n\n    MemberStatus(String code, "
+      },
+      {
+        "file": "src/main/resources/mappers/Book_SQL.xml",
+        "line_start": 7,
+        "line_end": 39,
+        "class_method": "BookMapper.selectBookList",
+        "snippet": "<select id=\"selectBookList\" parameterType=\"egovframework.library.book.BookSearchVO\"\n            resultType=\"egovframework.library.book.BookVO\">\n        SELECT\n            B.BOOK_ID       AS bookId,\n  "
+      },
+      {
+        "file": "src/main/java/egovframework/library/loan/LoanServiceImpl.java",
+        "line_start": 49,
+        "line_end": 56,
+        "class_method": "LoanServiceImpl.selectLoan",
+        "snippet": "@Override\n    public LoanVO selectLoan(String loanId) {\n        LoanVO loanVO = loanMapper.selectLoan(loanId);\n        if (loanVO == null) {\n            throw new DataNotFoundException(\"대출 정보를 찾을 수 없습"
+      },
+      {
+        "file": "src/main/resources/mappers/Book_SQL.xml",
+        "line_start": 60,
+        "line_end": 76,
+        "class_method": "BookMapper.selectBook",
+        "snippet": "<select id=\"selectBook\" parameterType=\"string\" resultType=\"egovframework.library.book.BookVO\">\n        SELECT\n            B.BOOK_ID       AS bookId,\n            B.ISBN          AS isbn,\n            B."
+      },
+      {
+        "file": "src/main/resources/mappers/Book_SQL.xml",
+        "line_start": 113,
+        "line_end": 115,
+        "class_method": "BookMapper.updateLoanYn",
+        "snippet": "<update id=\"updateLoanYn\">\n        UPDATE TB_BOOK SET LOAN_YN = #{loanYn} WHERE BOOK_ID = #{bookId}\n    </update>"
+      },
+      {
+        "file": "src/main/resources/mappers/Loan_SQL.xml",
+        "line_start": 55,
+        "line_end": 71,
+        "class_method": "LoanMapper.selectLoan",
+        "snippet": "<select id=\"selectLoan\" parameterType=\"string\" resultType=\"egovframework.library.loan.LoanVO\">\n        SELECT\n            L.LOAN_ID     AS loanId,\n            L.BOOK_ID     AS bookId,\n            L.ME"
+      },
+      {
+        "file": "src/main/resources/mappers/Loan_SQL.xml",
+        "line_start": 73,
+        "line_end": 78,
+        "class_method": "LoanMapper.selectLoanCountByMember",
+        "snippet": "<select id=\"selectLoanCountByMember\" resultType=\"int\">\n        SELECT COUNT(*)\n        FROM TB_LOAN\n        WHERE MEMBER_ID = #{memberId}\n          AND LOAN_STATUS = #{loanStatus}\n    </select>"
+      },
+      {
+        "file": "src/main/resources/mappers/Loan_SQL.xml",
+        "line_start": 80,
+        "line_end": 86,
+        "class_method": "LoanMapper.insertLoan",
+        "snippet": "<insert id=\"insertLoan\" parameterType=\"egovframework.library.loan.LoanVO\">\n        INSERT INTO TB_LOAN (\n            LOAN_ID, BOOK_ID, MEMBER_ID, LOAN_DATE, DUE_DATE, LOAN_STATUS, EXTEND_CNT\n        )"
+      },
+      {
+        "file": "src/main/resources/mappers/Loan_SQL.xml",
+        "line_start": 88,
+        "line_end": 93,
+        "class_method": "LoanMapper.updateReturn",
+        "snippet": "<update id=\"updateReturn\" parameterType=\"egovframework.library.loan.LoanVO\">\n        UPDATE TB_LOAN\n        SET RETURN_DATE = #{returnDate},\n            LOAN_STATUS = #{loanStatus}\n        WHERE LOAN_"
+      }
+    ],
+    "chain_summary": "처리 흐름: /book/selectBookList.do / /loan/insertLoan.do / /loan/updateReturn.do → BookController.selectBookList / LoanController.insertLoan / LoanController.updateReturn → BookServiceImpl.selectBookList / LoanServiceImpl.insertLoan / LoanServiceImpl.selectLoan / LoanServiceImpl.updateReturn → 테이블(TB_BOOK, TB_CATEGORY, TB_LOAN, TB_LOAN_HIST, TB_MEMBER, TB_OVERDUE)",
+    "elapsed_ms": 24991
+  }
+}
