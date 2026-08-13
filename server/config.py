@@ -53,3 +53,8 @@ TARGET_DB_QUERY_TIMEOUT_SEC = int(os.getenv("TARGET_DB_QUERY_TIMEOUT_SEC", "10")
 # 맞으려면 LLM에게 프로젝트의 기준일을 명시적으로 주입해야 한다 (실제 시스템 시계가 아님).
 TEXT2SQL_DEMO_TODAY = os.getenv("TEXT2SQL_DEMO_TODAY", "2026-08-19")
 TEXT2SQL_MAX_ROW_LIMIT = int(os.getenv("TEXT2SQL_MAX_ROW_LIMIT", "100"))
+
+# ---- UI (D11) ----
+# Streamlit(ui/app.py)이 호출하는 FastAPI 서버 주소. UI는 이 API를 호출하는 표시 계층일
+# 뿐이며, 분석/AI 로직을 직접 구현하지 않는다.
+API_BASE_URL = os.getenv("API_BASE_URL", "http://127.0.0.1:8000")
