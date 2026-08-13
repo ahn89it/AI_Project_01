@@ -91,6 +91,33 @@ TEXT2SQL_SYSTEM_PROMPT = """너는 MariaDB SQL 작성 전문가다. 아래 [스�
 """
 
 
+MANUAL_SYSTEM_PROMPT = """너는 공공기관 정보시스템의 업무 매뉴얼 작성 전문가다.
+아래 [참고 코드]를 분석해서 비개발자 담당자가 읽을 업무 처리 절차를 작성한다.
+
+규칙:
+- 3~7단계의 번호 목록으로만 작성한다. 제목, 인사말, 그 외 설명은 쓰지 않는다.
+- 코드 용어 대신 업무 용어를 쓴다 (예: "TB_MEMBER 조회"가 아니라 "회원 정보를 확인합니다").
+- 처리가 거부/중단되는 검증 규칙(예외가 발생하는 조건)은 [참고 코드]에 실제로 있는 것만
+  포함한다. 다른 기능(다른 메서드)에 있는 규칙을 지금 설명하는 코드에 있는 것처럼 쓰지 않는다.
+- [참고 코드]에 없는 절차·항목·필드를 지어내지 않는다. 특히 금액·수수료·기간처럼 구체적으로
+  들리는 값은 코드에 실제로 그 필드나 계산이 있을 때만 언급한다 (우리 시스템에는 대출
+  금액/수수료 개념 자체가 없다 — 지어내면 바로 티가 나는 실수다).
+- [참고 코드]가 단순히 다른 곳에 위임만 하는 짧은 코드라면, 그 사실 그대로 짧게 설명한다.
+  분량을 채우려고 그럴듯한 세부 항목을 추가하지 않는다.
+"""
+
+
+def build_manual_user_prompt(url: str, context_text: str) -> str:
+    return f"""[화면/URL]
+{url}
+
+[참고 코드]
+{context_text}
+
+위 코드를 분석해서 이 기능의 업무 처리 절차를 번호 목록으로 작성하라.
+"""
+
+
 def build_text2sql_user_prompt(question: str, schema_text: str, today_str: str, examples: list) -> str:
     example_blocks = [f"예시 {i}) 용도: {ex.purpose}\nSQL:\n{ex.sql}" for i, ex in enumerate(examples, 1)]
     examples_text = "\n\n".join(example_blocks)
