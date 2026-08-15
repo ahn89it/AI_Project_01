@@ -2,12 +2,14 @@ package egovframework.library.loan;
 
 import java.util.List;
 
+import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 
 /**
  * 대출(TB_LOAN) / 대출이력(TB_LOAN_HIST) MyBatis 매퍼 인터페이스.
  * 실제 SQL은 resources/mappers/Loan_SQL.xml 참조.
  */
+@Mapper
 public interface LoanMapper {
 
     List<LoanVO> selectLoanList(LoanSearchVO searchVO);

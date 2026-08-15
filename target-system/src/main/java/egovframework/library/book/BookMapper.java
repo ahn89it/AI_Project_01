@@ -2,12 +2,14 @@ package egovframework.library.book;
 
 import java.util.List;
 
+import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 
 /**
  * 도서(TB_BOOK) / 분류(TB_CATEGORY) MyBatis 매퍼 인터페이스.
  * 실제 SQL은 resources/mappers/Book_SQL.xml 참조.
  */
+@Mapper
 public interface BookMapper {
 
     List<BookVO> selectBookList(BookSearchVO searchVO);

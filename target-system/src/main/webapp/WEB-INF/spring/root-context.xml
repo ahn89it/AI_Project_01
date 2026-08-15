@@ -28,9 +28,13 @@
         <property name="mapperLocations" value="classpath:mappers/*.xml"/>
     </bean>
 
-    <!-- Mapper 인터페이스 자동 스캔 (egovframework.library.*.*Mapper) -->
+    <!-- Mapper 인터페이스 자동 스캔 (egovframework.library.*.*Mapper).
+         annotationClass로 @Mapper가 붙은 인터페이스만 스캔 대상으로 한정한다 — 그렇지 않으면
+         같은 패키지에 있는 Service 인터페이스(예: BookService)까지 매퍼로 오인해 빈 이름이
+         충돌한다 (ConflictingBeanDefinitionException). -->
     <bean class="org.mybatis.spring.mapper.MapperScannerConfigurer">
         <property name="basePackage" value="egovframework.library"/>
+        <property name="annotationClass" value="org.apache.ibatis.annotations.Mapper"/>
         <property name="sqlSessionFactoryBeanName" value="sqlSessionFactory"/>
     </bean>
 

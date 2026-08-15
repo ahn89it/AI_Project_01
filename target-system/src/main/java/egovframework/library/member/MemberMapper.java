@@ -2,12 +2,14 @@ package egovframework.library.member;
 
 import java.util.List;
 
+import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 
 /**
  * 회원(TB_MEMBER) MyBatis 매퍼 인터페이스.
  * 실제 SQL은 resources/mappers/Member_SQL.xml 참조.
  */
+@Mapper
 public interface MemberMapper {
 
     List<MemberVO> selectMemberList(MemberSearchVO searchVO);

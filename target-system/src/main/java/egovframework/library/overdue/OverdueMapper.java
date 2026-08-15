@@ -2,6 +2,7 @@ package egovframework.library.overdue;
 
 import java.util.List;
 
+import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 
 import egovframework.library.loan.LoanVO;
@@ -10,6 +11,7 @@ import egovframework.library.loan.LoanVO;
  * 연체(TB_OVERDUE) MyBatis 매퍼 인터페이스.
  * 실제 SQL은 resources/mappers/Overdue_SQL.xml 참조.
  */
+@Mapper
 public interface OverdueMapper {
 
     List<OverdueVO> selectOverdueList(OverdueSearchVO searchVO);
