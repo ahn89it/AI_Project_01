@@ -53,8 +53,8 @@ streamlit run ui\app.py
 ```
 
 ### 종료
-`run_all.bat`이 띄운 "FastAPI"·"Streamlit" 창을 닫으면 됩니다. MariaDB는 창이 없는 백그라운드
-프로세스라 작업관리자에서 `mariadbd.exe`를 종료하거나 컴퓨터 재부팅 시 같이 꺼집니다.
+`scripts\stop_all.bat` 더블클릭 — Ollama·MariaDB·FastAPI·Streamlit·Tomcat 전부(켜져 있는
+것만) 포트 기준으로 찾아서 한 번에 종료합니다. 창을 하나하나 닫을 필요 없음.
 
 ---
 
@@ -96,7 +96,7 @@ $env:CATALINA_HOME = "C:\Users\gunny\tools\apache-tomcat-9.0.120"
 - `/overdue/selectOverdueList.do` — 연체 목록
 
 ### 종료
-`catalina.bat run` 창을 그냥 닫거나 Ctrl+C. 또는:
+`scripts\stop_all.bat`으로 한 번에 끄거나, `catalina.bat run` 창을 그냥 닫거나 Ctrl+C. 또는:
 ```
 $env:CATALINA_HOME = "C:\Users\gunny\tools\apache-tomcat-9.0.120"
 & "$env:CATALINA_HOME\bin\shutdown.bat"
