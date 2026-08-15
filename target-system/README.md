@@ -28,6 +28,17 @@ mariadb -u root -P 3307 -h 127.0.0.1 library_db < db/seed.sql
 
 DB 접속 정보는 `src/main/resources/db.properties`에 있습니다 (로컬 개발용 기본값: root / 비밀번호 없음).
 
+### 실제로 띄우기 (Tomcat 9)
+
+WAR까지만 만들면 끝이던 걸 2026-08-15에 실제로 배포까지 검증했습니다. 서블릿 API가
+`javax.servlet` 4.0(구버전 네임스페이스)이라 **Tomcat 9까지만** 호환됩니다(Tomcat 10+는
+`jakarta.servlet`으로 바뀌어서 안 됨). 전체 절차와 트러블슈팅은
+[`../docs/RUNBOOK.md`](../docs/RUNBOOK.md)의 "2. 도서관 사이트(target-system) 실행" 절 참고.
+
+배포해보면서 발견한 버그(시연용 의도적 버그 2개와는 무관): `MapperScannerConfigurer`가
+Service 인터페이스까지 매퍼로 오인해 스프링 빈 이름이 충돌하던 문제를 `@Mapper` 어노테이션 +
+`annotationClass` 필터로 수정함.
+
 ## 패키지 구조
 
 ```
