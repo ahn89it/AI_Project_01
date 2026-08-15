@@ -1,17 +1,27 @@
 @echo off
-REM 시연 콜드스타트 스크립트: Ollama/MariaDB 확인 -> FastAPI -> Streamlit 순서로 기동한다.
+REM 시연 콜드스타트 스크립트: Ollama/MariaDB 확인(필요시 자동 기동) -> FastAPI -> Streamlit 순서로 기동한다.
 setlocal
 cd /d "%~dp0.."
 
 echo [1/4] Ollama 상태 확인 중...
 curl -s -o nul -w "" http://localhost:11434/api/tags
-if errorlevel 1 (
-    echo   Ollama가 응답하지 않습니다. 먼저 Ollama를 실행한 뒤 이 스크립트를 다시 실행하세요.
-    pause
-    exit /b 1
-) else (
-    echo   Ollama 정상 응답.
+if not errorlevel 1 (
+    echo   Ollama 이미 실행 중.
+    goto ollama_done
 )
+echo   Ollama가 떠 있지 않아 백그라운드로 기동합니다...
+start "Ollama" /min "C:\Users\gunny\AppData\Local\Programs\Ollama\ollama.exe" serve
+for /l %%i in (1,1,15) do (
+    timeout /t 2 /nobreak >nul
+    curl -s -o nul http://localhost:11434/api/tags
+    if not errorlevel 1 goto ollama_ready
+)
+echo   Ollama가 30초 내에 응답하지 않습니다. Ollama 설치 상태를 확인한 뒤 다시 실행하세요.
+pause
+exit /b 1
+:ollama_ready
+echo   Ollama 정상 응답.
+:ollama_done
 
 echo [2/4] MariaDB(3307) 상태 확인 중...
 netstat -an | findstr ":3307" | findstr "LISTENING" >nul
