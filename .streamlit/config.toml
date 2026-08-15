@@ -1,3 +1,8 @@
+[client]
+# 오프라인 폐쇄망 데모 콘셉트와 맞지 않는 Streamlit Community Cloud "Deploy" 버튼과
+# 상단 메뉴(⋮)를 숨긴다.
+toolbarMode = "minimal"
+
 [theme]
 base = "light"
 primaryColor = "#1B4D89"
